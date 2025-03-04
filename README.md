@@ -76,6 +76,10 @@ You can also change the evaluation mode in `eval.sh` script from `train` to `eva
 Our training code is based on [DrQv2](https://github.com/facebookresearch/drqv2) and [RL-ViGen](https://github.com/gemcollector/RL-ViGen)
 And we also thank the codebase of [VRL3](https://github.com/microsoft/VRL3), [DMC-GB](https://github.com/nicklashansen/dmcontrol-generalization-benchmark), [SECANT](https://github.com/DrJimFan/SECANT).
 
+## Funding
+
+This work has been partially supported by Horizon Europe (and UKRI Horizon Guaranteed Fund) under the Marie Skłodowska-Curie grant agreement No 101072488 (TRAIL). This work was also in part supported by a project funded by the EPSRC Prosperity grant CRADLE (EP/X02489X/1) and by the Air Force Office of Scientific Research, USAF, under the CASPER++ Awards (FA8655-24-1-7047).
+
 ## License
 
 The majority of RL-ViGen, DrQ-v2, DMCGB, VRL3 is licensed under the MIT license. Habitat Lab, dmc2gym, mujoco-py are also licensed under the MIT license. However portions of the project are available under separate license terms: DeepMind, mj_envs, and mjrl is licensed under the Apache 2.0 license. Gibson based task datasets, the code for generating such datasets, and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/). CARLA specific assets are distributed under CC-BY License. The ad-rss-lib library compiled and linked by the [RSS Integration build variant](Docs/adv_rss.md) introduces [LGPL-2.1-only License](https://opensource.org/licenses/LGPL-2.1)
