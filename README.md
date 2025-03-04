@@ -2,6 +2,10 @@
 
 We have released DeGuV -- a **De**pth-**Gu**ided **Vi**sual Reinforcement Learning model targetting Generalization and Interpretability.
 
+## Overview
+
+[Paper Comming soon] [[Demo](https://www.youtube.com/watch?v=-Gt5i6Wi5Fs)]
+
 <p align="center">
   <br />
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-red.svg" /></a>
