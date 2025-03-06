@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import utils
-from utils import random_overlay
+from utils import random_overlay, random_color_jitter
 
 class RandomShiftsAug(nn.Module):
     def __init__(self, pad):
@@ -44,21 +44,21 @@ class RandomShiftsAug(nn.Module):
                              padding_mode='zeros',
                              align_corners=False)
 
-class RandomJitterAug(nn.Module):
-    def __init__(self):
-        super().__init__()
+# class RandomJitterAug(nn.Module):
+#     def __init__(self):
+#         super().__init__()
 
-    def forward(self, x):
-        b, c, h, w = x.shape
-        transform_module = ColorJitterLayer(
-            brightness=0.4,
-            contrast=0.4,
-            saturation=0.4,
-            hue=0.5,
-            batch_size=b,
-            stack_size=c // 3
-        )
-        return transform_module(x.view(-1, 3, h, w) / 255.).view(b, c, h, w) * 255.
+#     def forward(self, x):
+#         b, c, h, w = x.shape
+#         transform_module = ColorJitterLayer(
+#             brightness=0.4,
+#             contrast=0.4,
+#             saturation=0.4,
+#             hue=0.5,
+#             batch_size=b,
+#             stack_size=c // 3
+#         )
+#         return transform_module(x.view(-1, 3, h, w) / 255.).view(b, c, h, w) * 255.
 
 
 class Encoder(nn.Module):
@@ -90,7 +90,7 @@ class SharedCNN(nn.Module):
         self.num_filters = num_filters
 
         self.layers = [
-            nn.Conv2d(obs_shape[0], num_filters, 3, stride=2),
+            nn.Conv2d(obs_shape[0] - 3, num_filters, 3, stride=2),
         ]
         for _ in range(1, num_layers):
             self.layers.append(nn.ReLU())
@@ -192,7 +192,7 @@ class SVEAAgent:
 
         # data augmentation
         self.aug = RandomShiftsAug(pad=4)
-
+        self.att = None
         self.train()
         self.critic_target.train()
 
@@ -204,6 +204,7 @@ class SVEAAgent:
 
     def act(self, obs, step, eval_mode):
         obs = torch.as_tensor(obs, device=self.device)
+        obs = obs[:9,:,:]
         obs = self.encoder(obs.unsqueeze(0))
         stddev = utils.schedule(self.stddev_schedule, step)
         dist = self.actor(obs, stddev)
@@ -238,6 +239,7 @@ class SVEAAgent:
         aug_Q1, aug_Q2 = self.critic(aug_obs, action)
         aug_loss = F.mse_loss(aug_Q1, target_Q) + F.mse_loss(aug_Q2, target_Q)
 
+        metrics['train_critic_mask_loss'] = aug_loss
         critic_loss = 0.5 * (critic_loss + aug_loss)
 
 
@@ -289,14 +291,16 @@ class SVEAAgent:
         batch = next(replay_iter)
         obs, action, reward, discount, next_obs = utils.to_torch(
             batch, self.device)
-
+        obs = obs[:,:9,:,:]
         # augment
         obs = self.aug(obs.float())
         original_obs = obs.clone()
+
+        next_obs = next_obs[:,:9,:,:]
         next_obs = self.aug(next_obs.float())
 
         # strong augmentation
-        aug_obs = self.encoder(random_overlay(original_obs))
+        aug_obs = self.encoder(random_overlay(random_color_jitter(original_obs)))
 
         # encode
         obs = self.encoder(obs)

@@ -12,7 +12,7 @@ from rl_utils import (
     make_obs_grad_grid,
 )
 from algos.drqv2 import DrQV2Agent, Actor, Critic
-from utils import attribution_augmentation, random_overlay
+from utils import attribution_augmentation, random_overlay, random_color_jitter
 import random
 
 def _get_out_shape(in_shape, layers):
@@ -192,7 +192,7 @@ class SGQNAgent(DrQV2Agent):
     def update_aux(self, obs, action):
         obs_grad = compute_attribution(self.encoder, self.critic, obs, action.detach())
         mask = compute_attribution_mask(obs_grad, self.quantile)
-        s_tilde = random_overlay(obs.clone())
+        s_tilde = random_overlay(random_color_jitter(obs.clone()))
         self.aux_optimizer.zero_grad()
         pred_attrib, aux_loss = self.compute_attribution_loss(s_tilde, action, mask)
         aux_loss.backward()

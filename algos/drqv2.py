@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import utils
-
+from utils import random_overlay, random_color_jitter
 
 class RandomShiftsAug(nn.Module):
     def __init__(self, pad):
@@ -44,6 +44,8 @@ class RandomShiftsAug(nn.Module):
                              padding_mode='zeros',
                              align_corners=False)
 
+def rescale(array):
+    return (array-array.min())/(array.max()-array.min())
 
 class Encoder(nn.Module):
     def __init__(self, obs_shape):
@@ -52,7 +54,7 @@ class Encoder(nn.Module):
         assert len(obs_shape) == 3
         self.repr_dim = 32 * 35 * 35
 
-        self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0], 32, 3, stride=2),
+        self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0] - 3, 32, 3, stride=2),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
@@ -62,9 +64,33 @@ class Encoder(nn.Module):
 
     def forward(self, obs):
         obs = obs / 255.0 - 0.5
+        # obs = rescale(obs) - 0.5
         h = self.convnet(obs)
         h = h.view(h.shape[0], -1)
         return h
+
+class DepthEncoder(nn.Module):
+    def __init__(self, obs_shape):
+        super().__init__()
+
+        assert len(obs_shape) == 3
+        self.repr_dim = 32 * 35 * 35
+
+        self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0] - 3, 32, 3, stride=2),
+                                     nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
+                                     nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
+                                     nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
+                                     nn.ReLU())
+
+        self.apply(utils.weight_init)
+
+    def forward(self, obs):
+        # obs = obs / 255.0 - 0.5
+        obs = rescale(obs) - 0.5
+        h = self.convnet(obs)
+        h = h.view(h.shape[0], -1)
+        return h
+
 
 
 class Actor(nn.Module):
@@ -164,6 +190,7 @@ class DrQV2Agent:
 
     def act(self, obs, step, eval_mode):
         obs = torch.as_tensor(obs, device=self.device)
+        obs = obs[:9,:,:]
         obs = self.encoder(obs.unsqueeze(0))
         stddev = utils.schedule(self.stddev_schedule, step)
         dist = self.actor(obs, stddev)
@@ -237,12 +264,16 @@ class DrQV2Agent:
         batch = next(replay_iter)
         obs, action, reward, discount, next_obs = utils.to_torch(
             batch, self.device)
+        obs = obs[:,:9,:,:]
+        next_obs = next_obs[:,:9,:,:]
 
         # augment
         obs = self.aug(obs.float())
         next_obs = self.aug(next_obs.float())
-        # encode
+
+        # obs = self.encoder(random_overlay(random_color_jitter(obs)))
         obs = self.encoder(obs)
+
         with torch.no_grad():
             next_obs = self.encoder(next_obs)
 

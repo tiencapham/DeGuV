@@ -4,9 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
-from drq import DrQAgent
-from drqv2 import DrQV2Agent, RandomShiftsAug, Actor, Critic
-
+from algos.drqv2 import DrQV2Agent, RandomShiftsAug, Actor, Critic
+from utils import random_overlay, random_color_jitter
 class CURLHead(nn.Module):
     def __init__(self, repr_dim):
         super().__init__()
@@ -34,7 +33,7 @@ class CNNEncoder(nn.Module):
         self.embed_dim = 32 * 35 * 35
         self.repr_dim = 512
 
-        self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0], 32, 3, stride=2),
+        self.convnet = nn.Sequential(nn.Conv2d(obs_shape[0]-3, 32, 3, stride=2),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
                                      nn.ReLU(), nn.Conv2d(32, 32, 3, stride=1),
@@ -118,6 +117,8 @@ class CURLAgent(DrQV2Agent):
         batch = next(replay_iter)
         obs, action, reward, discount, next_obs = utils.to_torch(
             batch, self.device)
+        obs = obs[:,:9,:,:]
+        next_obs = next_obs[:,:9,:,:]
 
         original_obs = obs.clone()
         pos_obs = obs.clone()
@@ -126,8 +127,8 @@ class CURLAgent(DrQV2Agent):
         next_obs = self.aug(next_obs.float())
         original_obs = self.aug(original_obs.float())
         pos_obs = self.aug(pos_obs.float())
-        # encode
-        obs = self.encoder(obs)
+
+        obs = self.encoder(random_overlay(random_color_jitter(obs)))
 
         with torch.no_grad():
             next_obs = self.encoder(next_obs)
